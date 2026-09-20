@@ -72,9 +72,24 @@ class InMemoryDayLogStore : DayLogStore {
 class DayLogManager(private val store: DayLogStore, private val clock: Clock) {
     var openLog: DayLogData? = null; private set
 
+    /**
+     * §21 crash recovery: adopts today's OPEN log from the encrypted store when the
+     * process died mid-day. FINALIZED logs are never re-opened here.
+     */
     fun ensureToday(dayId: String = clock.now().toLocalDate().toString()): DayLogData {
-        if (openLog == null || openLog!!.dayId != dayId) openLog = DayLogData(dayId)
+        if (openLog == null || openLog!!.dayId != dayId) {
+            val restored = runCatching { store.load(dayId) }.getOrNull()
+            openLog = if (restored != null && restored.status == DayLogStatus.OPEN) restored
+                      else DayLogData(dayId)
+        }
         return openLog!!
+    }
+
+    /** Called after every recorded turn — a crash mid-day never loses conversations (§21). */
+    fun persistOpen(): StoredDayStats? {
+        val log = openLog ?: return null
+        if (log.status != DayLogStatus.OPEN) return null
+        return store.save(log)   // encrypted at rest by the store impl (§14)
     }
 
     fun recordConversation(m: ChatMessage) { openLog!!.conversations += m }

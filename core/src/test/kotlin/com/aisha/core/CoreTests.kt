@@ -285,3 +285,35 @@ class ExportTests {
         assertTrue("quote \\\" and" in json)
     }
 }
+
+
+class CrashRecoveryTests {
+    @Test fun `process restart mid-day adopts persisted OPEN day log (spec 21)`() = runBlocking {
+        val store = InMemoryDayLogStore()
+        val clock = FixedClock()
+        val e1 = AishaCoreEngine(store = store, languageModel = MockLanguageModel(), clock = clock)
+        e1.handleUserTurn("remember this message after restart")
+        e1.handleUserTurn("and this one too")
+
+        // simulate process death: brand-new engine over the same encrypted store
+        val e2 = AishaCoreEngine(store = store, languageModel = MockLanguageModel(), clock = clock)
+        val out = e2.handleUserTurn("are you still here?")
+        val day = e2.dayLogs.ensureToday()
+        assertTrue("pre-crash conversation must survive restart",
+            day.conversations.any { "remember this message" in it.text })
+        assertTrue("post-crash turn lands in same day log",
+            day.conversations.any { "are you still here" in it.text })
+        assertTrue(out.text.isNotEmpty())
+    }
+
+    @Test fun `finalized day is never re-opened by ensureToday`() = runBlocking {
+        val store = InMemoryDayLogStore()
+        val clock = FixedClock()
+        val e = AishaCoreEngine(store = store, languageModel = MockLanguageModel(), clock = clock)
+        e.handleUserTurn("hello")
+        e.finalizeDay()
+        val day = e.dayLogs.ensureToday()   // same day id, but already FINALIZED
+        assertTrue("must start a fresh container, not resurrect a finalized log",
+            day.conversations.isEmpty() && day.status == DayLogStatus.OPEN)
+    }
+}

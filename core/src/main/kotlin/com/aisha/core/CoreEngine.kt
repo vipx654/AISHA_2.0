@@ -90,6 +90,7 @@ class AishaCoreEngine(
         recordTurn(log.dayId, inp, finalText)
         dayLogs.recordMoodPoint(mood.current())
         dayLogs.recordBondPoint(bond.state)
+        dayLogs.persistOpen()   // §21: crash-safe — every turn is encrypted-persisted immediately
         val transition = stageEvents.removeFirstOrNull()
         if (transition != null) {
             dayLogs.recordEvent("BOND_STAGE", "relationship state: ${transition.old.label} → ${transition.new.label}",
