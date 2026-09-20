@@ -24,6 +24,13 @@
             </intent-filter>
         </activity>
 
-        <!-- Live wallpaper service, background services, receivers: added in implementation phase -->
+        <!-- §20/§21 — day finalization runs on WorkManager; re-armed on boot -->
+        <receiver
+            android:name=".services.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

@@ -10,7 +10,7 @@ class AishaApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this, BuildConfig.GEMINI_API_KEY)
-        // TODO phase 2: schedule DayFinalizationService (midnight, spec §20),
-        //      ConnectivityMonitor + sync worker drain (spec §16/§21).
+        // §20 — midnight Day Finalization chain; BootReceiver re-arms after restart (§21).
+        com.aisha.app.services.ServiceScheduler.scheduleNextMidnight(this)
     }
 }

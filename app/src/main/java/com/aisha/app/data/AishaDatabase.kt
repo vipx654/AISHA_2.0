@@ -47,11 +47,50 @@ interface DayLogDao {
     suspend fun delete(dayId: String)
 }
 
-@Database(entities = [DayLogEntity::class], version = 1, exportSchema = true)
+/** LOCKED §18 — protected trash: encrypted blobs, not user-browsable, authorized recovery. */
+@Entity(tableName = "trash")
+data class TrashEntity(
+    @PrimaryKey val dayId: String,
+    val blob: ByteArray,
+    val sha16: String,
+    val reason: String,
+    val deletedAtMs: Long,
+    val rawBytes: Int,
+)
+
+@Dao
+interface TrashDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(item: TrashEntity)
+
+    @Query("SELECT * FROM trash ORDER BY dayId ASC")
+    suspend fun all(): List<TrashEntity>
+
+    @Query("SELECT * FROM trash WHERE dayId = :dayId")
+    suspend fun byDay(dayId: String): TrashEntity?
+
+    @Query("DELETE FROM trash WHERE dayId = :dayId")
+    suspend fun delete(dayId: String)
+}
+
+@Database(entities = [DayLogEntity::class, TrashEntity::class], version = 2, exportSchema = true)
 abstract class AishaDatabase : RoomDatabase() {
     abstract fun dayLogDao(): DayLogDao
+    abstract fun trashDao(): TrashDao
 
     companion object {
         const val NAME = "aisha.db"
+
+        /** §19/§21 — app updates must preserve user data: explicit migration, no data loss. */
+        val MIGRATION_1_2 = object : androidx.room.migration.Migration(1, 2) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `trash` (" +
+                        "`dayId` TEXT NOT NULL PRIMARY KEY, " +
+                        "`blob` BLOB NOT NULL, `sha16` TEXT NOT NULL, `reason` TEXT NOT NULL, " +
+                        "`deletedAtMs` INTEGER NOT NULL, `rawBytes` INTEGER NOT NULL)"
+                )
+            }
+        }
     }
 }

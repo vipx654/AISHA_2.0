@@ -53,6 +53,7 @@ interface DayLogStore {
     fun save(day: DayLogData): StoredDayStats
     fun load(dayId: String): DayLogData?
     fun listIds(): List<String>
+    fun delete(dayId: String)   // §18: moves through trash lifecycle, never silent loss
 }
 
 /** Test/memory-only store. Production app NEVER uses this for persistent data. */
@@ -65,6 +66,7 @@ class InMemoryDayLogStore : DayLogStore {
     }
     override fun load(dayId: String): DayLogData? = map[dayId]
     override fun listIds(): List<String> = map.keys.sorted()
+    override fun delete(dayId: String) { map.remove(dayId) }
 }
 
 class DayLogManager(private val store: DayLogStore, private val clock: Clock) {

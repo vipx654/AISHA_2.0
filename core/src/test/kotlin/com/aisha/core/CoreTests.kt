@@ -220,3 +220,68 @@ class ImportanceRecallTests {
         assertTrue(hits.first().snippet.contains("BOND_STAGE") || hits.first().snippet.contains("relationship"))
     }
 }
+
+
+class TrashTests {
+    private fun setup(): Triple<InMemoryDayLogStore, InMemoryTrashStore, TrashManager> {
+        val logs = InMemoryDayLogStore()
+        val trash = InMemoryTrashStore()
+        val events = mutableListOf<String>()
+        val mgr = TrashManager(trash, logs, clockMs = { 1000L }, audit = { events += it })
+        return Triple(logs, trash, mgr)
+    }
+
+    @Test fun `deletion removes from active store and protects in trash`() {
+        val (logs, _, mgr) = setup()
+        logs.save(DayLogData("2026-09-20", summary = "s"))
+        val ok = mgr.moveToTrash("2026-09-20", "user request", byteArrayOf(1, 2), "abc", 2)
+        assertTrue(ok)
+        assertNull("deleted day must leave active store", logs.load("2026-09-20"))
+    }
+
+    @Test fun `trash is never a recall source`() {
+        val (logs, trash, _) = setup()
+        logs.save(DayLogData("2026-09-20", summary = "secret picnic plan"))
+        val mgr = TrashManager(trash, logs, { 1L })
+        mgr.moveToTrash("2026-09-20", "user request", byteArrayOf(1), "s", 1)
+        val hits = RecallEngine(logs).recall("secret picnic", 5)
+        assertTrue("deleted content must be unreachable from recall", hits.isEmpty())
+    }
+
+    @Test fun `restore requires authorization and audits`() {
+        val (logs, _, mgr) = setup()
+        logs.save(DayLogData("2026-09-20", summary = "s"))
+        mgr.moveToTrash("2026-09-20", "test", byteArrayOf(1), "s", 1)
+        val r = mgr.restore("2026-09-20", Authorization.UserLocal)
+        assertTrue(r is RestoreResult.RESTORED)
+    }
+
+    @Test fun `purge is permanent and admin-denied for plain admins`() {
+        val (_, trash, mgr) = setup()
+        trash.put(TrashedDay("2026-09-20", byteArrayOf(1), "s", "t", 1, 1))
+        assertTrue(mgr.purge("2026-09-20", Authorization.UserLocal))
+        assertNull(trash.take("2026-09-20"))
+        trash.put(TrashedDay("2026-09-21", byteArrayOf(1), "s", "t", 1, 1))
+        assertFalse("plain Admin must not purge (SuperAdmin only with server policy)",
+            mgr.purge("2026-09-21", Authorization.Admin("t")))
+    }
+}
+
+class ExportTests {
+    @Test fun `readable export contains days and labels`() {
+        val day = DayLogData("2026-09-20", summary = "quiet day").apply {
+            events += DayEvent(java.time.LocalDateTime.of(2026, 9, 20, 10, 0), "NOTE", "hello world", Importance.HIGH)
+            conversations += ChatMessage(Role.USER, "hi", java.time.LocalDateTime.of(2026, 9, 20, 10, 1))
+        }
+        val out = ExportBuilder.buildReadable(listOf(day))
+        assertTrue(out.startsWith("AISHA DATA EXPORT — READABLE SUMMARY"))
+        assertTrue("DAY 2026-09-20" in out && "hello world" in out && "[HIGH]" in out)
+    }
+
+    @Test fun `archive json is versioned and escaping is safe`() {
+        val day = DayLogData("2026-09-20", summary = "quote \" and backslash \\ test")
+        val json = ExportBuilder.buildArchiveJson(listOf(day))
+        assertTrue(json.startsWith("{\"format\":\"AISHA_EXPORT_V1\""))
+        assertTrue("quote \\\" and" in json)
+    }
+}

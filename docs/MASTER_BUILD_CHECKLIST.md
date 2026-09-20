@@ -10,7 +10,7 @@
 | 1 | Application UI & navigation | 🟡 | `app/ui/` | 7 screens scaffolded; Chat live end-to-end; Home/Mood/Bond/Logs render placeholders |
 | 2 | Core Intelligence engines | ✅ | `core/` (Identity, Mood, Bond, Decision, Presence, Conversation via WorkingMemory, Safety) | 22 unit tests green |
 | 3 | AI integration + response validation | ✅ | `core/AiPipeline.kt`, `app/ai/GeminiLanguageModel.kt` | pipeline locked; Gemini + Mock; validator blocks/adjusts |
-| 4 | Memory, Day Logs, recall | 🟡 | `core/Memory.kt`, `app/data/` | engine+store+recall done w/ importance; viewer UI ⏳ |
+| 4 | Memory, Day Logs, recall | 🟡 | `core/Memory.kt`, `app/data/`, `ui/DayLogViewModel` | engine+store+recall+viewer UI done (decrypt→integrity→render); recall search UI ⏳ |
 | 5 | Mood & Love Bond state | ✅ | `core/MoodEngine.kt`, `core/BondEngine.kt` | validated economy; stage-gating |
 | 6 | Presence & proactive behavior | 🟡 | `core/DecisionEngine.kt` (AmbientPolicy), `prototype` greetings | greetings only in prototype; Android presence ⏳ |
 | 7 | Tasks, reminders, notifications | ⏳ PENDING | `app/tasks/TaskModules.kt` contracts only | phase 3 |
@@ -19,13 +19,13 @@
 | 10 | Authentication & authorization | 🟡 | `core/SecurityContracts.kt` roles | local-only mode real; account mode/Google Sign-In ⏳ |
 | 11 | Encryption & key management | 🟡 | `app/security/KeystoreCrypto.kt` | AES-256/GCM real; audit+rotation workflows ⏳ |
 | 12 | Cloud backup/sync & queues | ⏳ PENDING | Room `status` queue seed; cloud client ⏳ | phase 2; 40-day retention LOCKED |
-| 13 | Storage, retention, export, recovery | 🟡 | Room store (integrity-first) | export/recovery UI ⏳ |
-| 14 | Trash/deletion lifecycle | ⏳ PENDING | `app/memory/MemoryModules.kt` contracts | phase 2 |
+| 13 | Storage, retention, export, recovery | 🟡 | Room store + `memory/AndroidExportManager.kt` | readable+encrypted exports done; share-sheet UI ⏳; cloud retention ⏳ |
+| 14 | Trash/deletion lifecycle | ✅ | `core/Trash.kt` (4 tests) + `app/data/RoomTrashStore.kt` + viewer delete flow | delete→protected trash→authorized restore→audit; purge SuperAdmin-gated |
 | 15 | Admin & audit | ⏳ PENDING | `app/security/SecurityModules.kt`, `app/admin/` contracts | phase 5; server-side enforcement |
-| 16 | Background services | ⏳ PENDING | `app/services/ServiceContracts.kt` | midnight finalizer first (phase 2) |
+| 16 | Background services | 🟡 | `app/services/Workers.kt` | Day Finalization worker (midnight, self-rescheduling, boot-rearmed) ✅; sync worker queues honestly (cloud backend ⏳ PENDING §25); notification/battery/update/crash services ⏳ |
 | 17 | Offline/failure handling | 🟡 | `core/CoreEngine.kt` degraded paths | engine done; device paths (restart/recovery) ⏳ |
 | 18 | Simulation & automated tests | 🟡 | `core/src/test/` (22 green), `prototype/simulate.py` | CI runs suite; on-device sims ⏳ |
-| 19 | Migration/update safety | 🟡 | Room v1 + safe defaults | real migrations from schema v2 |
+| 19 | Migration/update safety | 🟡 | Room v2 + `MIGRATION_1_2` | explicit data-preserving migration shipped; future versions follow |
 | 20 | Post-launch extension interfaces | 🟡 | `docs/ARCHITECTURE_MAP.md` phase plan | extension points reserved, none remove foundation |
 
 **Master rule check (§25):** no locked module has been removed or replaced by a

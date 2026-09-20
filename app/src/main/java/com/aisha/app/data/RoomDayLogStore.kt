@@ -58,6 +58,8 @@ class RoomDayLogStore(
 
     override fun listIds(): List<String> = runBlocking { dao.allDayIds() }
 
+    override fun delete(dayId: String) = runBlocking { dao.delete(dayId) }
+
     private fun sha256(b: ByteArray): String =
         MessageDigest.getInstance("SHA-256").digest(b).joinToString("") { "%02x".format(it) }
 
