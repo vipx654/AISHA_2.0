@@ -188,4 +188,35 @@ class PipelineTests {
         (e.clock as FixedClock).nextDay()
         e.finalizeDay()
     }
+
+    @Test fun `activity notes are safe phrases - never leak user text (Master 19)`() = runBlocking {
+        val secret = "my sister Ananya is preparing for NEET in Kota"
+        val e = engine()
+        val out = e.handleUserTurn(secret)
+        assertTrue(out.activityNotes.isNotEmpty())
+        assertTrue("notes must never contain user input",
+            out.activityNotes.none { it.contains("Ananya") || it.contains(secret) })
+    }
+
+    @Test fun `bond stage change is recorded as MILESTONE event (Workflow 5 and 18)`() = runBlocking {
+        val e = engine()
+        repeat(400) { e.handleUserTurn("I love you jaan, you mean everything") }  // enough to cross Warm (25)
+        val day = e.dayLogs.ensureToday()
+        assertTrue("stage milestone must be persisted to day log",
+            day.events.any { it.type == "BOND_STAGE" && it.importance == Importance.MILESTONE })
+    }
+}
+
+class ImportanceRecallTests {
+    @Test fun `milestone events outrank normal events in recall`() {
+        val store = InMemoryDayLogStore()
+        val clock = FixedClock()
+        val mgr = DayLogManager(store, clock)
+        mgr.ensureToday()
+        mgr.recordEvent("NOTE", "user mentioned Kota once", Importance.NORMAL)
+        mgr.recordEvent("BOND_STAGE", "relationship state: Companion → Warm Familiarity in Kota talk", Importance.MILESTONE)
+        mgr.finalizeDay()
+        val hits = RecallEngine(store).recall("Kota", 5)
+        assertTrue(hits.first().snippet.contains("BOND_STAGE") || hits.first().snippet.contains("relationship"))
+    }
 }

@@ -86,13 +86,25 @@ class AishaCoreEngine(
             }
         }
 
-        // 7) reply → day log (spec §5 last step)
+        // 7) reply → day log (spec §5 last step) + safe activity notes (Master §19)
         recordTurn(log.dayId, inp, finalText)
         dayLogs.recordMoodPoint(mood.current())
         dayLogs.recordBondPoint(bond.state)
+        val transition = stageEvents.removeFirstOrNull()
+        if (transition != null) {
+            dayLogs.recordEvent("BOND_STAGE", "relationship state: ${transition.old.label} → ${transition.new.label}",
+                Importance.MILESTONE)
+        }
+        val notes = buildList {
+            if (memories.isNotEmpty()) add("checked recent memory")
+            if (decision.goal == ResponseGoal.SUPPORT) add("adjusting response tone")
+            if (violations.isNotEmpty()) add("applied response safety rules")
+            if (transition != null) add("updated relationship state")
+            add("saving today's event")
+        }
         return TurnResult(finalText, violations, degraded = false,
             language = inp.language, memoriesUsed = memories.size,
-            stageTransition = stageEvents.removeFirstOrNull())
+            stageTransition = transition, activityNotes = notes)
     }
 
     /** Midnight/day-boundary path (spec §6/§20 Day Finalization Service). */
@@ -145,11 +157,20 @@ class AishaCoreEngine(
                 if (language == "hi") "ऑफ़लाइन हैं — सब कुछ स्थानीय रूप से सेव हो रहा है।"
                 else "We're offline — everything is being saved locally."
         }
+        val note = when (reason) {
+            DegradedReason.AI_SERVICE_UNAVAILABLE -> "language service offline — using safe local mode"
+            DegradedReason.VALIDATOR_BLOCKED -> "applied response safety rules"
+            DegradedReason.NETWORK_OFFLINE -> "offline — data stays encrypted on device"
+        }
         return TurnResult(text, emptyList(), degraded = true, language = language,
-            memoriesUsed = 0, stageTransition = null)
+            memoriesUsed = 0, stageTransition = null, activityNotes = listOf(note))
     }
 }
 
+/**
+ * Master §19 — Safe Activity Log. Notes are fixed operational phrases only
+ * ("checking recent memory"), never raw prompts, reasoning or model output.
+ */
 data class TurnResult(
     val text: String,
     val violations: List<String>,
@@ -157,6 +178,7 @@ data class TurnResult(
     val language: String,
     val memoriesUsed: Int,
     val stageTransition: StageTransition?,
+    val activityNotes: List<String> = emptyList(),
 )
 
 enum class DegradedReason { AI_SERVICE_UNAVAILABLE, NETWORK_OFFLINE, VALIDATOR_BLOCKED }

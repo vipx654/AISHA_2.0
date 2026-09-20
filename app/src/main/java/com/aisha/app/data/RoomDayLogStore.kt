@@ -6,6 +6,7 @@ import com.aisha.core.DayEvent
 import com.aisha.core.DayLogData
 import com.aisha.core.DayLogStatus
 import com.aisha.core.DayLogStore
+import com.aisha.core.Importance
 import com.aisha.core.EncryptionService
 import com.aisha.core.MoodPoint
 import com.aisha.core.MoodState
@@ -76,7 +77,8 @@ class RoomDayLogStore(
             }
         })
         put("events", JSONArray().apply {
-            d.events.forEach { put(JSONObject().put("type", it.type).put("desc", it.description).put("at", it.at.toString())) }
+            d.events.forEach { put(JSONObject().put("type", it.type).put("desc", it.description)
+                .put("at", it.at.toString()).put("imp", it.importance.name)) }
         })
         put("mood", JSONArray().apply {
             d.moodTimeline.forEach { p -> put(JSONObject().put("at", p.at.toString()).put("m", JSONObject(
@@ -104,7 +106,8 @@ class RoomDayLogStore(
         val evts = o.optJSONArray("events") ?: JSONArray()
         for (i in 0 until evts.length()) {
             val e = evts.getJSONObject(i)
-            day.events += DayEvent(LocalDateTime.parse(e.getString("at")), e.getString("type"), e.getString("desc"))
+            day.events += DayEvent(LocalDateTime.parse(e.getString("at")), e.getString("type"), e.getString("desc"),
+                runCatching { Importance.valueOf(e.optString("imp", "NORMAL")) }.getOrDefault(Importance.NORMAL))
         }
         val moods = o.optJSONArray("mood") ?: JSONArray()
         for (i in 0 until moods.length()) {

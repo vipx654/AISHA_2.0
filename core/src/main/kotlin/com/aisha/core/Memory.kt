@@ -30,7 +30,11 @@ data class DayLogData(
     var status: DayLogStatus = DayLogStatus.OPEN,
 )
 
-data class DayEvent(val at: LocalDateTime, val type: String, val description: String)
+/** Workflow §5 — every recorded event carries an importance class (roadmap §23: scoring refines this). */
+enum class Importance { LOW, NORMAL, HIGH, MILESTONE }
+
+data class DayEvent(val at: LocalDateTime, val type: String, val description: String,
+                    val importance: Importance = Importance.NORMAL)
 data class MoodPoint(val at: LocalDateTime, val mood: MoodState)
 data class BondPoint(val at: LocalDateTime, val score: Float, val stage: String, val trust: Float)
 data class TaskEntry(val at: LocalDateTime, val title: String, val done: Boolean = false)
@@ -76,7 +80,9 @@ class DayLogManager(private val store: DayLogStore, private val clock: Clock) {
     fun recordBondPoint(bond: BondState) {
         openLog!!.bondTimeline += BondPoint(clock.now(), bond.totalScore, bond.stage.label, bond.trust)
     }
-    fun recordEvent(type: String, description: String) { openLog!!.events += DayEvent(clock.now(), type, description) }
+    fun recordEvent(type: String, description: String, importance: Importance = Importance.NORMAL) {
+        openLog!!.events += DayEvent(clock.now(), type, description, importance)
+    }
     fun recordTask(title: String, done: Boolean = false) { openLog!!.tasks += TaskEntry(clock.now(), title, done) }
 
     /** Midnight path: summary → store (compress+encrypt+tag+sync-queue inside store). */
@@ -111,7 +117,12 @@ class RecallEngine(private val store: DayLogStore) {
                 if (score > 0) hits += MemoryHit(dayId, "${c.role.name.lowercase()}: ${c.text.take(110)}", score)
             }
             for (e in day.events) {
-                val score = terms.count { (e.description + " " + e.type).lowercase().contains(it) } + 0.5f
+                val boost = when (e.importance) {
+                    Importance.MILESTONE -> 1.0f
+                    Importance.HIGH -> 0.5f
+                    else -> 0f
+                }
+                val score = terms.count { (e.description + " " + e.type).lowercase().contains(it) } + 0.5f + boost
                 if (score > 0.5f) hits += MemoryHit(dayId, "[${e.type}] ${e.description.take(110)}", score)
             }
         }
