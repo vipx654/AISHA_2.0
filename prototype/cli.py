@@ -16,7 +16,8 @@ DATA = os.environ.get("AISHA_DATA", os.path.join(os.path.dirname(os.path.abspath
 def banner(e: AishaCoreEngine):
     g = on_app_open(e.clock.now)
     print("=" * 64)
-    print(f" AISHA Core Engine prototype — day {e.clock.day_id}")
+    brain = "Gemini (real API)" if type(e.llm).__name__ == "GeminiLLM" else "MockLLM (offline)"
+    print(f" AISHA Core Engine prototype — day {e.clock.day_id} — brain: {brain}")
     print(f" {g.text}   (bond: {e.bond.state.stage.label}, {e.bond.state.total_score:.0f}/100)")
     print("=" * 64)
     print("Type to chat. /help for commands. /exit to quit.\n")

@@ -87,8 +87,17 @@ class GeminiLLM:
             raise LLMUnavailable(f"gemini: {e}")
 
 
+def _key_from_file() -> str | None:
+    """Paste-place for the API key: prototype/gemini_key.txt (gitignored)."""
+    kf = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "gemini_key.txt")
+    if not os.path.exists(kf):
+        return None
+    lines = [l.strip() for l in open(kf, encoding="utf-8") if l.strip() and not l.strip().startswith("#")]
+    return lines[0] if lines else None
+
+
 def make_llm() -> object:
-    key = os.environ.get("GEMINI_API_KEY")
+    key = os.environ.get("GEMINI_API_KEY") or _key_from_file()
     return GeminiLLM(key) if key else MockLLM()
 
 

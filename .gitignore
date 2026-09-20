@@ -18,3 +18,7 @@ prototype/data/
 *.keystore
 local.properties
 secrets.properties
+
+# API keys — paste locally, NEVER commit
+prototype/gemini_key.txt
+.env
