@@ -1,0 +1,20 @@
+# Android
+*.iml
+.gradle/
+local.properties
+.idea/
+.DS_Store
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Python prototype
+__pycache__/
+*.pyc
+prototype/data/
+
+# Secrets — NEVER commit keys
+*.keystore
+local.properties
+secrets.properties
