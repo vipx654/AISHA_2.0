@@ -1,37 +1,16 @@
 package com.aisha.app.security
 
+import com.aisha.core.Authorization
+
 /**
- * LOCKED §14 — Key Management. Device key material protected by platform
- * secure storage (Android Keystore); separate user-data key material;
- * rotation-capable; high-risk operations restricted.
+ * LOCKED §14 — Key management beyond the data key (KeystoreCrypto): audit trail,
+ * restricted operations. Audit never duplicates private conversation content (§19).
  */
 interface KeyManager {
-    fun dataKeyHandle(): String        // never expose raw key material
+    fun dataKeyHandle(): String          // never expose raw key material
     fun rotateKeys(authorization: Authorization)
 }
 
-/**
- * LOCKED §14 — Encryption. Data protection flow: raw data → compress where
- * applicable → ENCRYPT → storage/upload. Protects conversations, day logs,
- * audio, media, backups, exports.
- */
-interface EncryptionService {
-    fun encrypt(plain: ByteArray): ByteArray
-    fun decrypt(cipher: ByteArray): ByteArray
-}
-
-/** Privileged roles per §15. Enforced server-side for admin/super-admin. Client is NOT trusted. */
-sealed class Authorization {
-    object UserLocal : Authorization()
-    data class Admin(val token: String) : Authorization()
-    data class SuperAdmin(val token: String) : Authorization()
-}
-
-/**
- * LOCKED §19 — Audit Manager. Admin logins, authorization failures, recovery,
- * security changes, sensitive exports, security events. Records accountability
- * metadata WITHOUT duplicating private conversation content.
- */
 interface AuditManager {
     fun record(event: AuditEvent): String
     fun recent(limit: Int): List<AuditEvent>

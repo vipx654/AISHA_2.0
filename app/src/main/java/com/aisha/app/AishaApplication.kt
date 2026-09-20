@@ -1,16 +1,16 @@
 package com.aisha.app
 
 import android.app.Application
+import com.aisha.app.di.AppContainer
 
-/**
- * AISHA application entry point.
- * Dependency wiring (AppContainer) is added in the implementation phase;
- * interfaces are locked per docs/SPEC_SUMMARY_v1.0.md.
- */
 class AishaApplication : Application() {
+
+    lateinit var container: AppContainer; private set
+
     override fun onCreate() {
         super.onCreate()
-        // TODO implementation phase: initialise AppContainer (core engines, memory, security),
-        //      schedule DayFinalizationService (midnight), ConnectivityMonitor, BatteryManager.
+        container = AppContainer(this, BuildConfig.GEMINI_API_KEY)
+        // TODO phase 2: schedule DayFinalizationService (midnight, spec §20),
+        //      ConnectivityMonitor + sync worker drain (spec §16/§21).
     }
 }
