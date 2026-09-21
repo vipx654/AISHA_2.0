@@ -26,8 +26,11 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     val state: StateFlow<UiState> = _state
 
     init {
-        val greeting = com.aisha.app.ui.greetingFor(container.clock.now())
-        _state.value = _state.value.copy(messages = listOf(Bubble(false, greeting)))
+        // §9 Presence Engine — greeting from real state; absence derived from bookkeeping only
+        val presence = com.aisha.core.PresenceEngine()
+        val action = presence.onAppOpen(container.clock.now(), container.core.lastActiveDayOrNull())
+        val text = (action as? com.aisha.core.PresenceAction.Greeting)?.text ?: "I'm here."
+        _state.value = _state.value.copy(messages = listOf(Bubble(false, text)))
     }
 
     fun send(text: String) {

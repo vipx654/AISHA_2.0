@@ -317,3 +317,91 @@ class CrashRecoveryTests {
             day.conversations.isEmpty() && day.status == DayLogStatus.OPEN)
     }
 }
+
+
+class PresenceTests {
+    private fun engine() = PresenceEngine()
+
+    @Test fun `greeting follows time of day`() {
+        val p = engine()
+        assertTrue(p.onAppOpen(LocalDateTime.of(2026, 9, 21, 8, 0), null).let { it is PresenceAction.Greeting && "morning" in it.text })
+        assertTrue(p.onAppOpen(LocalDateTime.of(2026, 9, 21, 20, 0), null).let { it is PresenceAction.Greeting && "evening" in it.text })
+    }
+
+    @Test fun `return after absence is tiered and zero-guilt`() {
+        val p = engine()
+        val now = LocalDateTime.of(2026, 9, 21, 9, 0)
+        val short = p.onAppOpen(now, "2026-09-19") as PresenceAction.Greeting   // 2 days
+        assertTrue("days" in short.text)
+        val long = p.onAppOpen(now, "2026-06-01") as PresenceAction.Greeting    // ~3.5 months
+        assertTrue("No pressure" in long.text)
+        assertFalse("must not fabricate absence events", "while you were gone you" in long.text.lowercase())
+    }
+
+    @Test fun `quiet hours silence proactive behaviour`() {
+        var sent = 0
+        val p = PresenceEngine(AmbientPolicy(maxProactivePerDay = 2, quietStartHour = 22, quietEndHour = 7), { sent })
+        val night = LocalDateTime.of(2026, 9, 21, 23, 30)
+        val day = LocalDateTime.of(2026, 9, 21, 15, 0)
+        assertNull("no proactive at 23:30", p.proactiveCheck(night, batterySaver = false))
+        assertTrue(p.proactiveCheck(day, batterySaver = false) is PresenceAction.QuietPresence)
+    }
+
+    @Test fun `daily cap and battery saver stop proactive messages`() {
+        val capped = PresenceEngine(AmbientPolicy(maxProactivePerDay = 2), { 2 })
+        assertNull(capped.proactiveCheck(LocalDateTime.of(2026, 9, 21, 15, 0), false))
+        val saver = PresenceEngine(AmbientPolicy(), { 0 })
+        assertNull(saver.proactiveCheck(LocalDateTime.of(2026, 9, 21, 15, 0), batterySaver = true))
+    }
+}
+
+class TaskTests {
+    private class MemStore : TaskStore {
+        val map = linkedMapOf<String, AishaTask>()
+        override fun save(task: AishaTask) { map[task.id] = task }
+        override fun byId(id: String): AishaTask? = map[id]
+        override fun all(): List<AishaTask> = map.values.toList()
+        override fun delete(id: String) { map.remove(id) }
+    }
+
+    private fun engine(store: MemStore = MemStore(), events: MutableList<String> = mutableListOf()) =
+        Triple(TaskEngine(store, FixedClock(), scheduler = NoopReminderScheduler, onEvent = { t, _ -> events += t }), store, events)
+
+    @Test fun `create validates and records day log association`() {
+        val (e, _, events) = engine()
+        val t = e.create("call mom", FixedClock().now.plusHours(4))
+        assertEquals("2026-09-21", t.dayLogId)
+        assertTrue("TASK_CREATED" in events)
+        try { e.create("   ") ; fail("blank title must throw") } catch (_: TaskValidationException) {}
+    }
+
+    @Test fun `past due time is rejected`() {
+        val (e, _, _) = engine()
+        try { e.create("impossible", FixedClock().now.minusDays(1)); fail("past due must throw") }
+        catch (_: TaskValidationException) {}
+    }
+
+    @Test fun `complete is idempotent and cancels reminder`() {
+        val (e, _, events) = engine()
+        val t = e.create("revise physics")
+        e.complete(t.id); e.complete(t.id)
+        assertTrue(events.count { it == "TASK_COMPLETED" } == 1)
+        assertTrue(e.pending().isEmpty())
+    }
+
+    @Test fun `completed tasks cannot be edited (audit integrity)`() {
+        val (e, _, _) = engine()
+        val t = e.create("old plan")
+        e.complete(t.id)
+        try { e.edit(t.id, newTitle = "new plan"); fail("edit after complete must fail") }
+        catch (_: IllegalStateException) {}
+    }
+
+    @Test fun `dueBetween finds upcoming reminders`() {
+        val (e, _, _) = engine()
+        e.create("soon", FixedClock().now.plusMinutes(30))
+        e.create("later today", FixedClock().now.plusHours(5))
+        assertEquals(2, e.dueBetween(FixedClock().now, FixedClock().now.plusHours(6)).size)
+        assertEquals(1, e.dueBetween(FixedClock().now, FixedClock().now.plusHours(1)).size)
+    }
+}

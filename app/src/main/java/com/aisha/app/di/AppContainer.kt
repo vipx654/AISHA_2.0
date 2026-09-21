@@ -39,6 +39,15 @@ class AppContainer(context: Context, geminiApiKey: String?) {
     /** §17 — readable + encrypted exports. */
     val exporter = AndroidExportManager(context, dayLogStore, crypto)
 
+    /** Master §9 — Task Manager (authoritative task state owner) + WorkManager reminders. */
+    val taskEngine = com.aisha.core.TaskEngine(
+        store = com.aisha.app.data.RoomTaskStore(db.taskDao()),
+        clock = clock,
+        scheduler = com.aisha.app.services.WorkManagerReminderScheduler(context),
+        onEvent = { type, task ->
+            android.util.Log.i("AISHA_TASK", "$type ${task.id} ${task.title.take(40)}")
+        })
+
     val languageModel: LanguageModel =
         geminiApiKey?.takeIf { it.isNotBlank() }?.let { GeminiLanguageModel(it) } ?: MockLanguageModel()
 

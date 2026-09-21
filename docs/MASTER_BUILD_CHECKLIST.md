@@ -12,8 +12,8 @@
 | 3 | AI integration + response validation | ✅ | `core/AiPipeline.kt`, `app/ai/GeminiLanguageModel.kt` | pipeline locked; Gemini + Mock; validator blocks/adjusts |
 | 4 | Memory, Day Logs, recall | 🟡 | `core/Memory.kt`, `app/data/`, `ui/DayLogViewModel` | engine+store+recall+viewer UI done (decrypt→integrity→render); recall search UI ⏳ |
 | 5 | Mood & Love Bond state | ✅ | `core/MoodEngine.kt`, `core/BondEngine.kt` | validated economy; stage-gating |
-| 6 | Presence & proactive behavior | 🟡 | `core/DecisionEngine.kt` (AmbientPolicy), `prototype` greetings | greetings only in prototype; Android presence ⏳ |
-| 7 | Tasks, reminders, notifications | ⏳ PENDING | `app/tasks/TaskModules.kt` contracts only | phase 3 |
+| 6 | Presence & proactive behavior | 🟡 | `core/PresenceEngine.kt` (4 tests) + Chat greeting wiring | time-of-day + return-after-absence greetings live on device; zero-guilt tiers; proactive notification delivery ⏳ (gate logic done) |
+| 7 | Tasks, reminders, notifications | ✅ | `core/TaskEngine.kt` (5 tests) + Room tasks v3 + `TaskReminderWorker` + `AishaNotifier` + Tasks UI | create/edit/complete validated; reminders persist across restarts; quiet hours queue instead of firing; channel + Android 13 runtime permission |
 | 8 | 3D avatar & rendering pipeline | ⏳ PENDING | `app/avatar/` contracts only | phase 4 (stylized 2D → 3D) |
 | 9 | Voice & lip sync | ⏳ PENDING | — | phase 4 |
 | 10 | Authentication & authorization | 🟡 | `core/SecurityContracts.kt` roles | local-only mode real; account mode/Google Sign-In ⏳ |

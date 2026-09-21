@@ -47,6 +47,33 @@ interface DayLogDao {
     suspend fun delete(dayId: String)
 }
 
+/** Master §9 — task state; authoritative rows for TaskEngine (Master §21 owner). */
+@Entity(tableName = "tasks")
+data class TaskEntity(
+    @PrimaryKey val id: String,
+    val title: String,
+    val createdAtMs: Long,
+    val dueAtMs: Long?,
+    val completed: Boolean,
+    val completedAtMs: Long?,
+    val dayLogId: String?,
+)
+
+@Dao
+interface TaskDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(task: TaskEntity)
+
+    @Query("SELECT * FROM tasks WHERE id = :id")
+    suspend fun byId(id: String): TaskEntity?
+
+    @Query("SELECT * FROM tasks")
+    suspend fun all(): List<TaskEntity>
+
+    @Query("DELETE FROM tasks WHERE id = :id")
+    suspend fun delete(id: String)
+}
+
 /** LOCKED §18 — protected trash: encrypted blobs, not user-browsable, authorized recovery. */
 @Entity(tableName = "trash")
 data class TrashEntity(
@@ -73,10 +100,11 @@ interface TrashDao {
     suspend fun delete(dayId: String)
 }
 
-@Database(entities = [DayLogEntity::class, TrashEntity::class], version = 2, exportSchema = true)
+@Database(entities = [DayLogEntity::class, TrashEntity::class, TaskEntity::class], version = 3, exportSchema = true)
 abstract class AishaDatabase : RoomDatabase() {
     abstract fun dayLogDao(): DayLogDao
     abstract fun trashDao(): TrashDao
+    abstract fun taskDao(): TaskDao
 
     companion object {
         const val NAME = "aisha.db"
@@ -89,6 +117,17 @@ abstract class AishaDatabase : RoomDatabase() {
                         "`dayId` TEXT NOT NULL PRIMARY KEY, " +
                         "`blob` BLOB NOT NULL, `sha16` TEXT NOT NULL, `reason` TEXT NOT NULL, " +
                         "`deletedAtMs` INTEGER NOT NULL, `rawBytes` INTEGER NOT NULL)"
+                )
+            }
+        }
+
+        val MIGRATION_2_3 = object : androidx.room.migration.Migration(2, 3) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `tasks` (" +
+                        "`id` TEXT NOT NULL PRIMARY KEY, " +
+                        "`title` TEXT NOT NULL, `createdAtMs` INTEGER NOT NULL, `dueAtMs` INTEGER, " +
+                        "`completed` INTEGER NOT NULL, `completedAtMs` INTEGER, `dayLogId` TEXT)"
                 )
             }
         }

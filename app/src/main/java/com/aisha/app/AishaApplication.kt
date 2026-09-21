@@ -12,5 +12,7 @@ class AishaApplication : Application() {
         container = AppContainer(this, BuildConfig.GEMINI_API_KEY)
         // §20 — midnight Day Finalization chain; BootReceiver re-arms after restart (§21).
         com.aisha.app.services.ServiceScheduler.scheduleNextMidnight(this)
+        // §9 — notification channel for reminders/permitted presence
+        com.aisha.app.services.AishaNotifier.ensureChannel(this)
     }
 }

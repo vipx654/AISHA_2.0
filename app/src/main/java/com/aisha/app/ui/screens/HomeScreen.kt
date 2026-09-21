@@ -14,6 +14,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.navigation.NavController
 import com.aisha.app.ui.Routes
 
@@ -23,6 +27,11 @@ import com.aisha.app.ui.Routes
  */
 @Composable
 fun HomeScreen(nav: NavController) {
+    // §9/§10 — Android 13+ runtime permission for permitted notifications
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= 33) permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -39,6 +48,9 @@ fun HomeScreen(nav: NavController) {
             OutlinedButton(onClick = { nav.navigate(Routes.RELATIONSHIP) }) { Text("Bond") }
             OutlinedButton(onClick = { nav.navigate(Routes.DAY_LOGS) }) { Text("Logs") }
         }
-        OutlinedButton(onClick = { nav.navigate(Routes.SETTINGS) }) { Text("Settings") }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)) {
+            OutlinedButton(onClick = { nav.navigate(Routes.TASKS) }) { Text("Tasks") }
+            OutlinedButton(onClick = { nav.navigate(Routes.SETTINGS) }) { Text("Settings") }
+        }
     }
 }

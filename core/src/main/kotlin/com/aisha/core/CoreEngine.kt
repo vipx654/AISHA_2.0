@@ -25,6 +25,9 @@ class AishaCoreEngine(
     private val processor = InputProcessor()
 
     val stageEvents = ArrayDeque<StageTransition>()
+
+    /** §9 presence input: last day with real interaction (null = first contact). */
+    fun lastActiveDayOrNull(): String? = lastActiveDay
     private val mutex = Mutex()
     private var interactionsToday = 0
     private var lastActiveDay: String? = null

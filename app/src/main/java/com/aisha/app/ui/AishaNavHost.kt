@@ -10,6 +10,7 @@ import com.aisha.app.ui.screens.HomeScreen
 import com.aisha.app.ui.screens.MoodScreen
 import com.aisha.app.ui.screens.RelationshipScreen
 import com.aisha.app.ui.screens.SettingsScreen
+import com.aisha.app.ui.screens.TasksScreen
 import com.aisha.app.ui.screens.VoiceScreen
 
 /** LOCKED §3 — Application Interface System: 7 screens. */
@@ -21,6 +22,7 @@ object Routes {
     const val MOOD = "mood"
     const val RELATIONSHIP = "relationship"
     const val SETTINGS = "settings"
+    const val TASKS = "tasks"
 }
 
 @Composable
@@ -34,5 +36,6 @@ fun AishaNavHost() {
         composable(Routes.MOOD) { MoodScreen(nav) }
         composable(Routes.RELATIONSHIP) { RelationshipScreen(nav) }
         composable(Routes.SETTINGS) { SettingsScreen(nav) }
+        composable(Routes.TASKS) { TasksScreen(nav) }
     }
 }
