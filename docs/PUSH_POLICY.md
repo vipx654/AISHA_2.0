@@ -13,3 +13,4 @@ happen ONLY after explicit approval from the owner.
 | 2026-09-21 | vipx654 (chat) | professional restructure `:core` + CI (`1e7638b`) |
 | 2026-09-21 | vipx654 (chat) | push policy (`cfcdf98`) + master-build compliance (`18765db`) |
 | 2026-09-21 | vipx654 (chat) | Phase 2 (`e6a2716`) + crash safety (`d983e57`) |
+| 2026-09-21 | vipx654 (chat) | Phase 3 presence+tasks (`4ec0822`) |
